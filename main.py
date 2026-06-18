@@ -1,1 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>WorkAI — Productivity Assistant</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f5; color: #1a1a1a; min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 2rem 1rem; }
+  .app { background: #fff; border-radius: 14px; border: 1px solid #e5e5e5; width: 100%; max-width: 760px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+  .header { padding: 1.25rem 1.5rem; border-bottom: 1px solid #e5e5e5; display: flex; align-items: center; gap: 12px; }
+  .logo { width: 38px; height: 38px; border-radius: 10px; background: #178CF2; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .logo i { color: #fff; font-size: 20px; }
+  .header-title { font-size: 16px; font-weight: 600; }
+  .header-sub { font-size: 13px; color: #666; }
+  .nav { display: flex; gap: 4px; padding: 0.75rem 1rem; border-bottom: 1px solid #e5e5e5; overflow-x: auto; }
+  .nav-btn { padding: 6px 14px; border-radius: 8px; border: 1px solid transparent; font-size: 13px; cursor: pointer; white-space: nowrap; background: transparent; color: #555; display: flex; align-items: center; gap: 6px; transition: background .15s, color .15s; }
+  .nav-btn:hover { background: #f0f0f0; }
+  .nav-btn.active { background: #f0f0f0; color: #111; border-color: #ddd; }
+  .panel { display: none; padding: 1.5rem; flex-direction: column; gap: 1rem; }
+  .panel.active { display: flex; }
+  .field-label { font-size: 13px; color: #555; margin-bottom: 5px; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  select, input, textarea { width: 100%; border-radius: 8px; border: 1px solid #ddd; padding: 8px 10px; font-size: 14px; background: #fff; color: #1a1a1a; font-family: inherit; resize: vertical; transition: border-color .15s; }
+  textarea { min-height: 90px; }
+  select:focus, input:focus, textarea:focus { outline: none; border-color: #178CF2; }
+  .run-btn { align-self: flex-start; padding: 8px 20px; border-radius: 8px; border: none; background: #178CF2; color: #fff; font-size: 14px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: opacity .15s; }
+  .run-btn:hover { opacity: .85; }
+  .run-btn:disabled { opacity: .5; cursor: default; }
+  .output-label { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: #999; margin-bottom: 8px; }
+  .output-box { background: #f8f8f8; border-radius: 10px; border: 1px solid #e5e5e5; padding: 1rem 1.25rem; font-size: 14px; line-height: 1.75; white-space: pre-wrap; position: relative; }
+  .copy-btn { position: absolute; top: 10px; right: 10px; background: #fff; border: 1px solid #ddd; border-radius: 7px; padding: 4px 10px; font-size: 12px; cursor: pointer; color: #555; display: flex; align-items: center; gap: 5px; transition: background .15s; }
+  .copy-btn:hover { background: #f0f0f0; }
+  .spinner { width: 15px; height: 15px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .chat-history { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; min-height: 200px; max-height: 360px; padding: 4px 0; }
+  .chat-bubble { padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.65; max-width: 88%; }
+  .chat-bubble.user { background: #178CF2; color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+  .chat-bubble.ai { background: #f3f3f3; color: #1a1a1a; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid #e5e5e5; }
+  .chat-input-row { display: flex; gap: 8px; align-items: flex-end; }
+  .chat-input-row textarea { min-height: 44px; resize: none; }
+  .send-btn { padding: 9px 16px; border-radius: 8px; border: none; background: #178CF2; color: #fff; font-size: 15px; cursor: pointer; flex-shrink: 0; transition: opacity .15s; }
+  .send-btn:hover { opacity: .85; }
+  .send-btn:disabled { opacity: .5; }
+  .disclaimer { font-size: 12px; color: #888; border-top: 1px solid #e5e5e5; padding: 0.75rem 1.5rem; line-height: 1.5; }
+  @media (max-width: 500px) { .field-row { grid-template-columns: 1fr; } body { padding: 0; } .app { border-radius: 0; } }
+</style>
+</head>
+<body>
 
+<div class="app">
+  <div class="header">
+    <div class="logo"><i class="ti ti-layers-intersect"></i></div>
+    <div>
+      <div class="header-title">WorkAI Assistant</div>
+      <div class="header-sub">AI-powered workplace productivity</div>
+    </div>
+  </div>
+
+  <div class="nav">
+    <button class="nav-btn active" onclick="switchTab('email', this)"><i class="ti ti-mail"></i> Email Generator</button>
+    <button class="nav-btn" onclick="switchTab('notes', this)"><i class="ti ti-file-text"></i> Notes Summarizer</button>
+    <button class="nav-btn" onclick="switchTab('planner', this)"><i class="ti ti-calendar"></i> Task Planner</button>
+    <button class="nav-btn" onclick="switchTab('research', this)"><i class="ti ti-search"></i> Research Assistant</button>
+    <button class="nav-btn" onclick="switchTab('chat', this)"><i class="ti ti-message"></i> AI Chatbot</button>
+  </div>
+
+  <!-- Email Generator -->
+  <div class="panel active" id="panel-email">
+    <div class="field-row">
+      <div>
+        <div class="field-label">Audience</div>
+        <select id="email-audience">
+          <option>Client</option><option>Manager</option><option>Team</option><option>Executive</option><option>Vendor</option>
+        </select>
+      </div>
+      <div>
+        <div class="field-label">Tone</div>
+        <select id="email-tone">
+          <option>Formal</option><option>Informal</option><option>Persuasive</option><option>Apologetic</option><option>Assertive</option>
+        </select>
+      </div>
+    </div>
+    <div>
+      <div class="field-label">Subject / Purpose</div>
+      <input type="text" id="email-subject" placeholder="e.g. Follow up on proposal submitted last week" />
+    </div>
+    <div>
+      <div class="field-label">Key points to include</div>
+      <textarea id="email-points" placeholder="List the main things you want to communicate..."></textarea>
+    </div>
+    <button class="run-btn" id="email-btn" onclick="generateEmail()"><i class="ti ti-wand"></i> Generate Email</button>
+    <div id="email-output" style="display:none">
+      <div class="output-label">Generated email</div>
+      <div class="output-box">
+        <button class="copy-btn" onclick="copyText('email-text')"><i class="ti ti-copy"></i> Copy</button>
+        <span id="email-text"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notes Summarizer -->
+  <div class="panel" id="panel-notes">
+    <div>
+      <div class="field-label">Paste your meeting notes</div>
+      <textarea id="notes-input" style="min-height:140px" placeholder="Paste raw meeting notes, transcripts, or long text here..."></textarea>
+    </div>
+    <div class="field-row">
+      <div>
+        <div class="field-label">Output format</div>
+        <select id="notes-format">
+          <option>Key points + action items</option><option>Executive summary</option><option>Bullet point summary</option><option>Full structured report</option>
+        </select>
+      </div>
+      <div>
+        <div class="field-label">Highlight deadlines?</div>
+        <select id="notes-deadlines">
+          <option>Yes, extract deadlines</option><option>No, skip deadlines</option>
+        </select>
+      </div>
+    </div>
+    <button class="run-btn" id="notes-btn" onclick="summarizeNotes()"><i class="ti ti-wand"></i> Summarize Notes</button>
+    <div id="notes-output" style="display:none">
+      <div class="output-label">Summary</div>
+      <div class="output-box">
+        <button class="copy-btn" onclick="copyText('notes-text')"><i class="ti ti-copy"></i> Copy</button>
+        <span id="notes-text"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Task Planner -->
+  <div class="panel" id="panel-planner">
+    <div class="field-row">
+      <div>
+        <div class="field-label">Plan type</div>
+        <select id="plan-type">
+          <option>Daily plan</option><option>Weekly plan</option><option>Project sprint</option>
+        </select>
+      </div>
+      <div>
+        <div class="field-label">Work hours available</div>
+        <input type="number" id="plan-hours" value="8" min="1" max="16" />
+      </div>
+    </div>
+    <div>
+      <div class="field-label">Your tasks and responsibilities</div>
+      <textarea id="plan-tasks" style="min-height:110px" placeholder="List your tasks, meetings, and goals. Include urgency or deadlines if known..."></textarea>
+    </div>
+    <div>
+      <div class="field-label">Any constraints or priorities?</div>
+      <input type="text" id="plan-constraints" placeholder="e.g. Morning is for deep work, 2pm team standup" />
+    </div>
+    <button class="run-btn" id="plan-btn" onclick="generatePlan()"><i class="ti ti-wand"></i> Generate Plan</button>
+    <div id="plan-output" style="display:none">
+      <div class="output-label">Your plan</div>
+      <div class="output-box">
+        <button class="copy-btn" onclick="copyText('plan-text')"><i class="ti ti-copy"></i> Copy</button>
+        <span id="plan-text"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Research Assistant -->
+  <div class="panel" id="panel-research">
+    <div>
+      <div class="field-label">Topic or article to research</div>
+      <textarea id="research-input" style="min-height:120px" placeholder="Paste an article, describe a topic, or ask a research question..."></textarea>
+    </div>
+    <div class="field-row">
+      <div>
+        <div class="field-label">Output style</div>
+        <select id="research-style">
+          <option>Key insights + recommendations</option><option>Plain language summary</option><option>Pros and cons analysis</option><option>Executive briefing</option>
+        </select>
+      </div>
+      <div>
+        <div class="field-label">Audience</div>
+        <select id="research-audience">
+          <option>Non-technical stakeholder</option><option>Technical team</option><option>General professional</option><option>Executive leadership</option>
+        </select>
+      </div>
+    </div>
+    <button class="run-btn" id="research-btn" onclick="runResearch()"><i class="ti ti-wand"></i> Analyse</button>
+    <div id="research-output" style="display:none">
+      <div class="output-label">Research summary</div>
+      <div class="output-box">
+        <button class="copy-btn" onclick="copyText('research-text')"><i class="ti ti-copy"></i> Copy</button>
+        <span id="research-text"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chat -->
+  <div class="panel" id="panel-chat" style="gap:12px">
+    <div class="chat-history" id="chat-history">
+      <div class="chat-bubble ai">Hi! I'm your AI workplace assistant. Ask me anything — draft an email, plan your week, explain a concept, or help with any professional task.</div>
+    </div>
+    <div class="chat-input-row">
+      <textarea id="chat-input" placeholder="Type a message... (Enter to send)" onkeydown="chatKeyDown(event)"></textarea>
+      <button class="send-btn" id="chat-send" onclick="sendChat()"><i class="ti ti-send"></i></button>
+    </div>
+  </div>
+
+  <div class="disclaimer">
+    <i class="ti ti-shield-check" style="font-size:13px;vertical-align:-1px;margin-right:4px"></i>
+    <strong>Responsible AI notice:</strong> Outputs are AI-generated and may contain inaccuracies. Always review before sending or acting. Avoid entering sensitive personal data. AI suggestions are a starting point, not professional advice.
+  </div>
+</div>
+
+<script>
+  const API_URL = "https://api.anthropic.com/v1/messages";
+
+  // ── IMPORTANT: Replace the empty string below with your Anthropic API key ──
+  const API_KEY = "";
+
+  function switchTab(tab, btn) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('panel-' + tab).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  async function callClaude(prompt, systemPrompt) {
+    if (!API_KEY) throw new Error('No API key set. Open the HTML file and add your Anthropic API key to the API_KEY variable.');
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': API_KEY, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        system: systemPrompt || 'You are a professional AI workplace assistant. Be concise, practical, and professional.',
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || 'API error');
+    return data.content[0].text;
+  }
+
+  function setLoading(btnId, loading, label) {
+    const btn = document.getElementById(btnId);
+    btn.disabled = loading;
+    btn.innerHTML = loading ? '<div class="spinner"></div> Working...' : '<i class="ti ti-wand"></i> ' + label;
+  }
+
+  async function generateEmail() {
+    const audience = document.getElementById('email-audience').value;
+    const tone = document.getElementById('email-tone').value;
+    const subject = document.getElementById('email-subject').value.trim();
+    const points = document.getElementById('email-points').value.trim();
+    if (!subject) { alert('Please enter a subject or purpose.'); return; }
+    setLoading('email-btn', true, 'Generate Email');
+    try {
+      const prompt = `Write a professional workplace email:\n- Audience: ${audience}\n- Tone: ${tone}\n- Subject/Purpose: ${subject}\n- Key points: ${points || 'Not specified'}\n\nFormat: Subject line, then email body.`;
+      const result = await callClaude(prompt, 'You are an expert business communication specialist. Write clear, professional emails adapted to the audience and tone specified.');
+      document.getElementById('email-text').textContent = result;
+      document.getElementById('email-output').style.display = 'block';
+    } catch(e) { alert('Error: ' + e.message); }
+    setLoading('email-btn', false, 'Generate Email');
+  }
+
+  async function summarizeNotes() {
+    const notes = document.getElementById('notes-input').value.trim();
+    const format = document.getElementById('notes-format').value;
+    const deadlines = document.getElementById('notes-deadlines').value;
+    if (!notes) { alert('Please paste some notes to summarize.'); return; }
+    setLoading('notes-btn', true, 'Summarize Notes');
+    try {
+      const prompt = `Summarize the following meeting notes.\nFormat: ${format}\n${deadlines.includes('Yes') ? 'Extract and highlight deadlines and responsible parties.' : ''}\n\nNotes:\n${notes}`;
+      const result = await callClaude(prompt, 'You are an expert meeting facilitator. Extract key information, action items, and responsibilities clearly.');
+      document.getElementById('notes-text').textContent = result;
+      document.getElementById('notes-output').style.display = 'block';
+    } catch(e) { alert('Error: ' + e.message); }
+    setLoading('notes-btn', false, 'Summarize Notes');
+  }
+
+  async function generatePlan() {
+    const type = document.getElementById('plan-type').value;
+    const hours = document.getElementById('plan-hours').value;
+    const tasks = document.getElementById('plan-tasks').value.trim();
+    const constraints = document.getElementById('plan-constraints').value.trim();
+    if (!tasks) { alert('Please list your tasks.'); return; }
+    setLoading('plan-btn', true, 'Generate Plan');
+    try {
+      const prompt = `Create a structured ${type} for ${hours} hours.\n\nTasks:\n${tasks}\n${constraints ? '\nConstraints: ' + constraints : ''}\n\nInclude time blocks, priority levels (High/Medium/Low), and one time-optimization tip.`;
+      const result = await callClaude(prompt, 'You are an expert productivity coach. Create practical, realistic schedules balancing urgency, importance, and energy.');
+      document.getElementById('plan-text').textContent = result;
+      document.getElementById('plan-output').style.display = 'block';
+    } catch(e) { alert('Error: ' + e.message); }
+    setLoading('plan-btn', false, 'Generate Plan');
+  }
+
+  async function runResearch() {
+    const input = document.getElementById('research-input').value.trim();
+    const style = document.getElementById('research-style').value;
+    const audience = document.getElementById('research-audience').value;
+    if (!input) { alert('Please enter a topic or paste text to analyse.'); return; }
+    setLoading('research-btn', true, 'Analyse');
+    try {
+      const prompt = `Analyse the following:\n\n"${input}"\n\nOutput style: ${style}\nAudience: ${audience}\n\nInclude key insights, practical takeaways, and flag any limitations.`;
+      const result = await callClaude(prompt, 'You are a professional research analyst. Distil complex information into clear, actionable insights. Note limitations honestly.');
+      document.getElementById('research-text').textContent = result;
+      document.getElementById('research-output').style.display = 'block';
+    } catch(e) { alert('Error: ' + e.message); }
+    setLoading('research-btn', false, 'Analyse');
+  }
+
+  const chatMessages = [];
+
+  function chatKeyDown(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+  }
+
+  async function sendChat() {
+    const input = document.getElementById('chat-input');
+    const msg = input.value.trim();
+    if (!msg) return;
+    input.value = '';
+    addBubble(msg, 'user');
+    chatMessages.push({ role: 'user', content: msg });
+    const sendBtn = document.getElementById('chat-send');
+    sendBtn.disabled = true;
+    const typingEl = addBubble('...', 'ai');
+    try {
+      if (!API_KEY) throw new Error('No API key set.');
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': API_KEY, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6', max_tokens: 1000,
+          system: 'You are WorkAI, a professional workplace assistant. Help with emails, scheduling, research, summarizing, and professional tasks. Be concise and practical.',
+          messages: chatMessages
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error?.message);
+      const reply = data.content[0].text;
+      chatMessages.push({ role: 'assistant', content: reply });
+      typingEl.textContent = reply;
+    } catch(e) {
+      typingEl.textContent = 'Error: ' + e.message;
+    }
+    sendBtn.disabled = false;
+    scrollChat();
+  }
+
+  function addBubble(text, role) {
+    const history = document.getElementById('chat-history');
+    const div = document.createElement('div');
+    div.className = 'chat-bubble ' + role;
+    div.textContent = text;
+    history.appendChild(div);
+    scrollChat();
+    return div;
+  }
+
+  function scrollChat() {
+    const h = document.getElementById('chat-history');
+    h.scrollTop = h.scrollHeight;
+  }
+
+  function copyText(id) {
+    const text = document.getElementById(id).textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      const allCopyBtns = document.querySelectorAll('.copy-btn');
+      allCopyBtns.forEach(btn => {
+        if (btn.closest('.output-box')?.querySelector('#' + id)) {
+          btn.innerHTML = '<i class="ti ti-check"></i> Copied!';
+          setTimeout(() => btn.innerHTML = '<i class="ti ti-copy"></i> Copy', 2000);
+        }
+      });
+    });
+  }
+</script>
+</body>
+</html>
